@@ -37,7 +37,7 @@ On --down:
 # How do I install/use it ?
 
 Save vpnfailsafe&#46;sh in /etc/openvpn, make it executable and add the
-following lines to /etc/openvpn/<your_provider>.conf:
+following lines to /etc/openvpn/\<your_provider\>.conf:
 
 ```
 up /etc/openvpn/vpnfailsafe.sh
