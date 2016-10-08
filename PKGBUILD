@@ -22,5 +22,5 @@ package() {
     install -D -m755 "${pkgname%-git}.sh" "${pkgdir}/etc/openvpn/${pkgname%-git}.sh"
     install -D -m644 "README.md" "${pkgdir}/usr/share/doc/${pkgname%-git}/README.md"
     install -D -m644 "example.conf" "${pkgdir}/usr/share/doc/${pkgname%-git}/example.conf"
-    install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname%-git}/LICENSE"
 }
