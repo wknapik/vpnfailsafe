@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Requirements: bash, coreutils, glibc, grep, iproute2, iptables, procps-ng, openresolv, sed.
 
 set -eEuo pipefail
 

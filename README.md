@@ -46,7 +46,10 @@ down /etc/openvpn/vpnfailsafe.sh
 
 That's it.
 
-A complete example is included as example.conf.
+A complete configuration example is included as example.conf.
+
+Arch Linux users may use the PKGBUILD file to generate and install a
+`vpnfailsafe` package.
 
 If you want to use --user/--group to drop root priveleges, or otherwise run as
 an unprivileged user, prepare for an uphill battle. OpenVPN will not make it
@@ -55,11 +58,10 @@ invasive. Perhaps a working example will be added in the future.
 
 # What are the requirements/assumptions/limitations ?
 
-Beyond OpenVPN, the requirements are intentionally kept minimal. The list of
-required packages is at the top of the script. One assumption is that the VPN
-server will push at least one DNS to the client.
+Dependencies are minimal (listed in the PKGBUILD file). One assumption is that
+the VPN server will push at least one DNS to the client.
 
-`vpnfailsafe` was tested on Arch Linux, with a tun-device-based VPN (IP
+`vpnfailsafe` has been tested on Arch Linux, with a tun-device-based VPN (IP
 encapsulation).
 
 There is no ipv6 support.
