@@ -18,18 +18,13 @@ readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -g|cut -d= -f2))
 
-# $@ := ""
-error() {
-    exit 1
-}
-
 # $@ := "up" | "down"
 update_hosts() {
     pkill -P1 -f "bash $0" || true
     if [[ "$@" == up ]]; then
         uh() {
-            local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
             if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
+                local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
                 {
                     sed -e "/^$beg/,/^$end/d" /etc/hosts
                     echo -e "$beg\n$remote_entries\n$end"
@@ -63,8 +58,6 @@ update_routes() {
         if [[ -n $(ip addr show dev "$dev" 2>/dev/null) ]]; then
             ip addr del "$ifconfig_local/$ifconfig_netmask" dev "$dev"
         fi
-    else
-        error
     fi
 }
 
@@ -81,7 +74,6 @@ update_resolv() {
             done
             echo -e "${domains/ /search }\n${ns// /$'\n'nameserver }"|resolvconf -a "$dev";;
         down) resolvconf -d "$dev" 2>/dev/null || true;;
-        *) error;;
     esac
 }
 
@@ -104,7 +96,6 @@ update_firewall() {
         case "$@" in
             INPUT)  local -r sd=s states=""   io=i;;
             OUTPUT) local -r sd=d states=NEW, io=o;;
-            *) error;;
         esac
         local -r public_nic="$(ip route show "$trusted_ip"|cut -d' ' -f5)"
         local i=1; for remote in "${remotes[@]}"; do
@@ -121,7 +112,6 @@ update_firewall() {
         case "$@" in
             INPUT) local -r sd=s io=i;;
             OUTPUT|FORWARD) local -r sd=d io=o;;
-            *) error;;
         esac
         if [[ "$@" != FORWARD ]]; then
             iptables -A "VPNFAILSAFE_$*" -"$sd" "$ifconfig_local/$ifconfig_netmask" -"$io" "$dev" -j RETURN
@@ -132,12 +122,9 @@ update_firewall() {
     # $@ := "INPUT" | "OUTPUT" | "FORWARD"
     pass_vpn() {
         case "$@" in
-            INPUT)
-                iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP
-                local -r io=i;;
-            OUTPUT|FORWARD)
-                local -r io=o;;
-            *) error;;
+            INPUT) local -r io=i
+                   iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP;;
+            OUTPUT|FORWARD) local -r io=o;;
         esac
         iptables -A "VPNFAILSAFE_$*" -"$io" "$dev" -j RETURN
     }
