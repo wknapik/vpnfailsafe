@@ -21,7 +21,7 @@ readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -g|cut -d= -f2))
 # $@ := "up" | "down"
 update_hosts() {
     pkill -P1 -f "bash $0" || true
-    if [[ "$@" == up ]]; then
+    if [[ $@ == up ]]; then
         uh() {
             if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
                 local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
@@ -42,7 +42,7 @@ update_hosts() {
 # $@ := "up" | "down"
 update_routes() {
     remote_ips="$(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1)"
-    if [[ "$@" == up ]]; then
+    if [[ $@ == up ]]; then
         for remote_ip in $remote_ips; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
@@ -51,7 +51,7 @@ update_routes() {
         for net in 0.0.0.0/1 128.0.0.0/1; do
             [[ -z $(ip route show "$net") ]] && ip route add "$net" via "$route_vpn_gateway"
         done
-    elif [[ "$@" == down ]]; then
+    elif [[ $@ == down ]]; then
         for route in $remote_ips 0.0.0.0/1 128.0.0.0/1; do
             [[ -n $(ip route show "$route") ]] && ip route del "$route"
         done
@@ -113,7 +113,7 @@ update_firewall() {
             INPUT) local -r sd=s io=i;;
             OUTPUT|FORWARD) local -r sd=d io=o;;
         esac
-        if [[ "$@" != FORWARD ]]; then
+        if [[ $@ != FORWARD ]]; then
             iptables -A "VPNFAILSAFE_$*" -"$sd" "$ifconfig_local/$ifconfig_netmask" -"$io" "$dev" -j RETURN
         fi
         iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN
@@ -136,7 +136,7 @@ update_firewall() {
 
     for chain in INPUT OUTPUT FORWARD; do
         insert_chain "$chain"
-        [[ "$chain" != FORWARD ]] && accept_remotes "$chain"
+        [[ $chain != FORWARD ]] && accept_remotes "$chain"
         pass_private_nets "$chain"
         pass_vpn "$chain"
         drop_other "$chain"
@@ -164,7 +164,7 @@ main() {
     update_hosts "$st"
     update_routes "$st"
     update_resolv "$st"
-    if [[ "${st}" == up ]]; then
+    if [[ $st == up ]]; then
         update_firewall
     fi
 }
