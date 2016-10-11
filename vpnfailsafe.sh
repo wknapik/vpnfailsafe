@@ -16,7 +16,7 @@ readonly trusted_ip
 
 readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -g|cut -d= -f2))
+readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2))
 
 # $@ := "up" | "down"
 update_hosts() {
