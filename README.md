@@ -18,8 +18,8 @@ On --up:
   periodically, only using the VPN and the DNS pushed by the server).
 * Routes are set up, so that all traffic to the internet goes over the tunnel.
   The original default route is preserved and two more specific ones are added
-  (mimicking --redirect-gateway def1) + a route to the currently used VPN
-  server is added.
+  (mimicking --redirect-gateway def1) + routes to all configured VPN servers
+  are added.
 * /etc/resolv.conf is updated, so only the DNS pushed by the VPN server is used.
 * iptables rules are inserted at the beginning of INPUT, OUTPUT and FORWARD
   chains to ensure that the only traffic to/from the internet is between the
