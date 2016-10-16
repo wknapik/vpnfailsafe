@@ -101,7 +101,7 @@ update_firewall() {
         local i=1; for remote in "${remotes[@]}"; do
             local port="remote_port_$i"
             local proto="proto_$i"
-            iptables -A "VPNFAILSAFE_$*" -p "${!proto}" -"$sd" "$remote" --"$sd"port "${!port}" \
+            iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "$remote" --"$sd"port "${!port}" \
                 -m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT
             i=$((i + 1))
         done
