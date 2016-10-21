@@ -48,8 +48,9 @@ That's it.
 
 A complete configuration example is included as example.conf.
 
-Arch Linux users may use the PKGBUILD file to generate and install a
-`vpnfailsafe` package.
+Arch Linux users may choose to install the
+[vpnfailsafe-git](https://aur.archlinux.org/packages/vpnfailsafe-git/) package
+from AUR instead.
 
 If you want to use --user/--group to drop root priveleges, or otherwise run as
 an unprivileged user, prepare for an uphill battle. OpenVPN will not make it
@@ -81,8 +82,8 @@ the VPN servers might get stale and require removal.
 Yes. See "How does it work ?" for more details.
 
 That being said, if your life, job, or whatever you care about depend on your
-IP not leaking, consider that this script has been tested by one person with
-one VPN provider and a single configuration. YMMV.
+IP not leaking, consider that this script has been tested by only a handful of
+people. YMMV.
 
 # Will vpnfailsafe protect me against all forms of IP leaks ?
 
