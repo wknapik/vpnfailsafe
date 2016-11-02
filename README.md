@@ -1,6 +1,6 @@
 # What is vpnailsafe ?
 
-`vpnfailsafe` prevents a VPN user's non-VPN IP from being exposed on the
+`vpnfailsafe` prevents a VPN user's ISP-assigned IP from being exposed on the
 internet, both while the VPN connection is active and when it goes down.
 
 `vpnfailsafe` doesn't affect traffic to/from private networks, or disrupt existing
@@ -40,11 +40,15 @@ Save vpnfailsafe&#46;sh in /etc/openvpn, make it executable and add the
 following lines to /etc/openvpn/\<your_provider\>.conf:
 
 ```
+script-security 2
 up /etc/openvpn/vpnfailsafe.sh
 down /etc/openvpn/vpnfailsafe.sh
 ```
 
 That's it.
+
+Since `vpnfailsafe` contains the functionality of the popular
+update-resolv-conf&#46;sh script, the two don't need to be combined.
 
 A complete configuration example is included as example.conf.
 
@@ -62,10 +66,17 @@ invasive. Perhaps a working example will be added in the future.
 Dependencies are minimal (listed in the PKGBUILD file). One assumption is that
 the VPN server will push at least one DNS to the client.
 
-`vpnfailsafe` has been tested on Arch Linux, with a tun-device-based VPN (IP
-encapsulation).
+`vpnfailsafe` has been tested on Linux, with tun-device-based VPNs (IP
+encapsulation) in subnet and p2p topologies.
 
 There is no ipv6 support.
+
+UPDATE: some VPN providers assign hundreds of IPs to their VPN server domains
+and return different subsets of that pool in subsequent queries. This gets in
+the way of keeping routes and firewall exceptions for all these servers. At
+worst, this can prevent reconnection after the tunnel goes down and require
+going back to the state from before running `vpnfailsafe` to reconnect (see:
+below).
 
 # How do I restore my system to the state from before running vpnfailsafe ?
 

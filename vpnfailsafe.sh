@@ -5,7 +5,8 @@ set -eEuo pipefail
 readonly dev
 readonly ${!foreign_option_*}
 readonly ifconfig_local
-readonly ifconfig_netmask
+readonly ifconfig_remote # either (p2p)
+readonly ifconfig_netmask # or (subnet)
 readonly ${!proto_*}
 readonly ${!remote_*}
 readonly ${!remote_port_*}
@@ -13,6 +14,7 @@ readonly route_net_gateway
 readonly route_vpn_gateway
 readonly script_type
 readonly trusted_ip
+readonly trusted_port
 
 readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
@@ -43,7 +45,7 @@ update_hosts() {
 update_routes() {
     remote_ips="$(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1)"
     if [[ $@ == up ]]; then
-        for remote_ip in $remote_ips; do
+        for remote_ip in "$trusted_ip" $remote_ips; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
             fi
@@ -52,11 +54,11 @@ update_routes() {
             [[ -z $(ip route show "$net") ]] && ip route add "$net" via "$route_vpn_gateway"
         done
     elif [[ $@ == down ]]; then
-        for route in $remote_ips 0.0.0.0/1 128.0.0.0/1; do
+        for route in "$trusted_ip" $remote_ips 0.0.0.0/1 128.0.0.0/1; do
             [[ -n $(ip route show "$route") ]] && ip route del "$route"
         done
         if [[ -n $(ip addr show dev "$dev" 2>/dev/null) ]]; then
-            ip addr del "$ifconfig_local/$ifconfig_netmask" dev "$dev"
+            ip addr del "$ifconfig_local/${ifconfig_netmask:-32}" dev "$dev"
         fi
     fi
 }
@@ -98,6 +100,12 @@ update_firewall() {
             OUTPUT) local -r sd=d states=NEW, io=o;;
         esac
         local -r public_nic="$(ip route show "$trusted_ip"|cut -d' ' -f5)"
+        if ! trusted_ip_in_remote_ips="$(getent -s files hosts "$trusted_ip")"; then
+            for p in tcp udp; do
+                iptables -A "VPNFAILSAFE_$*" -p "$p" -"$sd" "$trusted_ip" --"$sd"port "${trusted_port}" \
+                    -m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT
+            done
+        fi
         local i=1; for remote in "${remotes[@]}"; do
             local port="remote_port_$i"
             local proto="proto_$i"
@@ -114,7 +122,7 @@ update_firewall() {
             OUTPUT|FORWARD) local -r sd=d io=o;;
         esac
         if [[ $@ != FORWARD ]]; then
-            iptables -A "VPNFAILSAFE_$*" -"$sd" "$ifconfig_local/$ifconfig_netmask" -"$io" "$dev" -j RETURN
+            iptables -A "VPNFAILSAFE_$*" -"$sd" "${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}" -"$io" "$dev" -j RETURN
         fi
         iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN
     }
