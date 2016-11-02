@@ -65,7 +65,7 @@ update_routes() {
 update_resolv() {
     case "$@" in
         up) local domains="" ns=""
-            for opt in "${!foreign_option_*}"; do
+            for opt in ${!foreign_option_*}; do
                 case "${!opt}" in
                     dhcp-option\ DOMAIN*) domains+="${!opt##* }";;
                     dhcp-option\ DNS\ *) ns+=" ${!opt##* }";;
