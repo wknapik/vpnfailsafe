@@ -5,7 +5,7 @@ set -eEuo pipefail
 readonly dev
 readonly ${!foreign_option_*}
 readonly ifconfig_local
-readonly ifconfig_remote # either (p2p)
+readonly ifconfig_remote # either (p2p/net30)
 readonly ifconfig_netmask # or (subnet)
 readonly ${!proto_*}
 readonly ${!remote_*}
@@ -22,22 +22,17 @@ readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2))
 
 # $@ := "up" | "down"
 update_hosts() {
-    pkill -P1 -f "bash $0" || true
     if [[ $@ == up ]]; then
-        uh() {
-            if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
-                local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
-                {
-                    sed -e "/^$beg/,/^$end/d" /etc/hosts
-                    echo -e "$beg\n$remote_entries\n$end"
-                } >/etc/hosts.vpnfailsafe
-                chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
-                sync /etc/hosts.vpnfailsafe
-                mv /etc/hosts.vpnfailsafe /etc/hosts
-            fi
-        }
-        uh
-        while true; do sleep 5m; uh; done& 
+        if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
+            local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
+            {
+                sed -e "/^$beg/,/^$end/d" /etc/hosts
+                echo -e "$beg\n$remote_entries\n$end"
+            } >/etc/hosts.vpnfailsafe
+            chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
+            sync /etc/hosts.vpnfailsafe
+            mv /etc/hosts.vpnfailsafe /etc/hosts
+        fi
     fi
 }
 

@@ -1,7 +1,7 @@
 # What is vpnailsafe ?
 
-`vpnfailsafe` prevents a VPN user's ISP-assigned IP from being exposed on the
-internet, both while the VPN connection is active and when it goes down.
+`vpnfailsafe` prevents a VPN user's ISP-assigned IP address from being exposed
+on the internet, both while the VPN connection is active and when it goes down.
 
 `vpnfailsafe` doesn't affect traffic to/from private networks, or disrupt existing
 firewall rules beyond its intended function.
@@ -13,9 +13,7 @@ It is meant to be executed by OpenVPN when the tunnel is established (--up), or
 torn down (--down). 
 
 On --up:
-* All configured VPN server domains are resolved and saved in /etc/hosts (once,
-  querying the originally configured DNS server from the public IP and later,
-  periodically, only using the VPN and the DNS pushed by the server).
+* All configured VPN server domains are resolved and saved in /etc/hosts.
 * Routes are set up, so that all traffic to the internet goes over the tunnel.
   The original default route is preserved and two more specific ones are added
   (mimicking --redirect-gateway def1) + routes to all configured VPN servers
@@ -26,9 +24,8 @@ On --up:
   VPN client and the VPN server.
 
 On --down:
-* Periodic /etc/hosts updates are stopped, but the entries for VPN servers are
-  kept, so the VPN connection can be re-established without querying DNS
-  servers outside the VPN.
+* The /etc/hosts entries for VPN servers remain in place, so the VPN connection
+  can be re-established without querying DNS servers outside the VPN.
 * Previously added routes are removed.
 * Previous /etc/resolv.conf is restored.
 * Firewall rules remain in place, allowing only the re-establishment of the vpn
@@ -67,16 +64,22 @@ Dependencies are minimal (listed in the PKGBUILD file). One assumption is that
 the VPN server will push at least one DNS to the client.
 
 `vpnfailsafe` has been tested on Linux, with tun-device-based VPNs (IP
-encapsulation) in subnet and p2p topologies.
+encapsulation) in all topologies supported by OpenVPN.
 
 There is no ipv6 support.
 
-UPDATE: some VPN providers assign hundreds of IPs to their VPN server domains
-and return different subsets of that pool in subsequent queries. This gets in
-the way of keeping routes and firewall exceptions for all these servers. At
-worst, this can prevent reconnection after the tunnel goes down and require
-going back to the state from before running `vpnfailsafe` to reconnect (see:
-below).
+"RTNETLINK answers: File exists" errors can be ignored safely. They appear when
+OpenVPN tries to set up a route, that's already been created by `vpnfailsafe`.
+
+The /etc/hosts entries may eventually become stale and require removal. Because
+some VPN providers assign hundreds of IPs to their VPN server domains and
+return different subsets of that pool in subsequent queries, updating these
+entries automatically becomes very problematic. It makes determining whether a
+previously valid IP is still valid impossible, so automated updates would
+require constantly changing hosts entries, routes and firewall rules and almost
+always to no benefit. In the interest of keeping this script small and simple,
+such updates are now considered out of scope, unless github issues show popular
+demand for the feature.
 
 # How do I restore my system to the state from before running vpnfailsafe ?
 
@@ -85,8 +88,8 @@ firewall rules. You can restore those using the init script that set the
 iptables rules on boot, or by otherwise removing the VPNFAILSAFE_INPUT,
 VPNFAILSAFE_OUTPUT and VPNFAILSAFE_FORWARD chains.
 
-If you're not going to use the VPN for a while, the entries in /etc/hosts for
-the VPN servers might get stale and require removal.
+Also, the entries in /etc/hosts for the VPN servers might get stale and require
+removal.
 
 # Will vpnfailsafe protect me against DNS leaks ?
 
