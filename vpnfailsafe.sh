@@ -117,7 +117,8 @@ update_firewall() {
             OUTPUT|FORWARD) local -r sd=d io=o;;
         esac
         if [[ $@ != FORWARD ]]; then
-            iptables -A "VPNFAILSAFE_$*" -"$sd" "${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}" -"$io" "$dev" -j RETURN
+            iptables -A "VPNFAILSAFE_$*" -"$sd" "${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}" \
+                -"$io" "$dev" -j RETURN
         fi
         iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN
     }
