@@ -25,7 +25,7 @@ On --up:
 
 On --down:
 * The /etc/hosts entries for VPN servers remain in place, so the VPN connection
-  can be re-established without querying DNS servers outside the VPN.
+  can be re-established without allowing traffic to DNS servers outside the VPN.
 * Previously added routes are removed.
 * Previous /etc/resolv.conf is restored.
 * Firewall rules remain in place, allowing only the re-establishment of the vpn
@@ -70,6 +70,8 @@ There is no ipv6 support.
 
 "RTNETLINK answers: File exists" errors can be ignored safely. They appear when
 OpenVPN tries to set up a route, that's already been created by `vpnfailsafe`.
+Adding the "route-noexec" option will tell OpenVPN to leave routing to
+`vpnfailsafe` and prevent those errors from appearing.
 
 The /etc/hosts entries may eventually become stale and require removal. Because
 some VPN providers assign hundreds of IPs to their VPN server domains and
