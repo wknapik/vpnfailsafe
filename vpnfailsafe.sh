@@ -5,8 +5,8 @@ set -eEuo pipefail
 readonly dev
 readonly ${!foreign_option_*}
 readonly ifconfig_local
-readonly ifconfig_remote # either (p2p/net30)
-readonly ifconfig_netmask # or (subnet)
+readonly ifconfig_netmask # either (subnet)
+readonly ifconfig_remote # or (p2p/net30)
 readonly ${!proto_*}
 readonly ${!remote_*}
 readonly ${!remote_port_*}
@@ -30,15 +30,15 @@ update_hosts() {
                 echo -e "$beg\n$remote_entries\n$end"
             } >/etc/hosts.vpnfailsafe
             chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
-            sync /etc/hosts.vpnfailsafe
             mv /etc/hosts.vpnfailsafe /etc/hosts
+            sync /etc/hosts
         fi
     fi
 }
 
 # $@ := "up" | "down"
 update_routes() {
-    remote_ips="$(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1)"
+    local -r remote_ips="$(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1)"
     if [[ $@ == up ]]; then
         for remote_ip in "$trusted_ip" $remote_ips; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
@@ -46,15 +46,16 @@ update_routes() {
             fi
         done
         for net in 0.0.0.0/1 128.0.0.0/1; do
-            [[ -z $(ip route show "$net") ]] && ip route add "$net" via "$route_vpn_gateway"
+            if [[ -z $(ip route show "$net") ]]; then
+                ip route add "$net" via "$route_vpn_gateway"
+            fi
         done
     elif [[ $@ == down ]]; then
         for route in "$trusted_ip" $remote_ips 0.0.0.0/1 128.0.0.0/1; do
-            [[ -n $(ip route show "$route") ]] && ip route del "$route"
+            if [[ -n $(ip route show "$route") ]]; then
+                ip route del "$route"
+            fi
         done
-        if [[ -n $(ip addr show dev "$dev" 2>/dev/null) ]]; then
-            ip addr del "$ifconfig_local/${ifconfig_netmask:-32}" dev "$dev"
-        fi
     fi
 }
 
@@ -157,7 +158,7 @@ trap cleanup INT TERM
 
 # $@ := line_number exit_code
 err_msg() {
-    echo "$0:$1: \`$(sed -n "$1,+0{s/^\s*//;p}" "$0")\` returned $2" >&2
+    echo "$0:$1: \`$(sed -n "$1,+0{s/^\s*//;p}" "$0")' returned $2" >&2
     cleanup
 }
 trap 'err_msg "$LINENO" "$?"' ERR
