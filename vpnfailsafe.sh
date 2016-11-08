@@ -20,19 +20,17 @@ readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2))
 
-# $@ := "up" | "down"
+# $@ := ""
 update_hosts() {
-    if [[ $@ == up ]]; then
-        if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
-            local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
-            {
-                sed -e "/^$beg/,/^$end/d" /etc/hosts
-                echo -e "$beg\n$remote_entries\n$end"
-            } >/etc/hosts.vpnfailsafe
-            chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
-            mv /etc/hosts.vpnfailsafe /etc/hosts
-            sync /etc/hosts
-        fi
+    if remote_entries="$(getent -s dns hosts "${remotes[@]}"|grep -v :)"; then
+        local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
+        {
+            sed -e "/^$beg/,/^$end/d" /etc/hosts
+            echo -e "$beg\n$remote_entries\n$end"
+        } >/etc/hosts.vpnfailsafe
+        chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
+        mv /etc/hosts.vpnfailsafe /etc/hosts
+        sync /etc/hosts
     fi
 }
 
@@ -96,7 +94,7 @@ update_firewall() {
             OUTPUT) local -r sd=d states=NEW, io=o;;
         esac
         local -r public_nic="$(ip route show "$trusted_ip"|cut -d' ' -f5)"
-        if ! trusted_ip_in_remote_ips="$(getent -s files hosts "$trusted_ip")"; then
+        if ! _trusted_ip_in_remote_ips="$(getent -s files hosts "$trusted_ip")"; then
             for p in tcp udp; do
                 iptables -A "VPNFAILSAFE_$*" -p "$p" -"$sd" "$trusted_ip" --"$sd"port "${trusted_port}" \
                     -m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT
@@ -152,7 +150,6 @@ update_firewall() {
 cleanup() {
     update_resolv down
     update_routes down
-    update_hosts down
 }
 trap cleanup INT TERM
 
@@ -165,13 +162,11 @@ trap 'err_msg "$LINENO" "$?"' ERR
 
 # $@ := ""
 main() {
-    local -r st="${script_type:-down}"
-    update_hosts "$st"
-    update_routes "$st"
-    update_resolv "$st"
-    if [[ $st == up ]]; then
-        update_firewall
-    fi
+    case "${script_type:-down}" in
+        up) for f in hosts routes resolv firewall; do "update_$f" up; done;;
+        down) update_routes down
+              update_resolv down;;
+    esac
 }
 
 main
