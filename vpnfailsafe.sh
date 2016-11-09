@@ -120,15 +120,9 @@ update_firewall() {
                 -"$io" "$dev" -j RETURN
         fi
         iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN
-    }
-
-    # $@ := "INPUT" | "OUTPUT" | "FORWARD"
-    pass_vpn() {
-        case "$@" in
-            INPUT) local -r io=i
-                   iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP;;
-            OUTPUT|FORWARD) local -r io=o;;
-        esac
+        if [[ "$@" == INPUT ]]; then
+            iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP
+        fi
         iptables -A "VPNFAILSAFE_$*" -"$io" "$dev" -j RETURN
     }
 
@@ -141,7 +135,6 @@ update_firewall() {
         insert_chain "$chain"
         [[ $chain != FORWARD ]] && accept_remotes "$chain"
         pass_private_nets "$chain"
-        pass_vpn "$chain"
         drop_other "$chain"
     done
 }
