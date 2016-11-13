@@ -30,7 +30,6 @@ update_hosts() {
         } >/etc/hosts.vpnfailsafe
         chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
         mv /etc/hosts.vpnfailsafe /etc/hosts
-        sync /etc/hosts
     fi
 }
 
@@ -94,36 +93,30 @@ update_firewall() {
             OUTPUT) local -r sd=d states=NEW, io=o;;
         esac
         local -r public_nic="$(ip route show "$trusted_ip"|cut -d' ' -f5)"
+        local -ar suf=(-m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT)
         if ! _trusted_ip_in_remote_ips="$(getent -s files hosts "$trusted_ip")"; then
             for p in tcp udp; do
-                iptables -A "VPNFAILSAFE_$*" -p "$p" -"$sd" "$trusted_ip" --"$sd"port "${trusted_port}" \
-                    -m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT
+                iptables -A "VPNFAILSAFE_$*" -p "$p" -"$sd" "$trusted_ip" --"$sd"port "${trusted_port}" "${suf[@]}"
             done
         fi
-        local i=1; for remote in "${remotes[@]}"; do
+        for ((i=1; i <= ${#remotes[*]}; ++i)); do
             local port="remote_port_$i"
             local proto="proto_$i"
-            iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "$remote" --"$sd"port "${!port}" \
-                -m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT
-            i=$((i + 1))
+            iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "${remotes[$i-1]}" --"$sd"port "${!port}" "${suf[@]}"
         done
     }
 
     # $@ := "INPUT" | "OUTPUT" | "FORWARD"
     pass_private_nets() { 
         case "$@" in
-            INPUT) local -r sd=s io=i;;
-            OUTPUT|FORWARD) local -r sd=d io=o;;
+            INPUT) local -r sd=s io=i;;&
+            OUTPUT|FORWARD) local -r sd=d io=o;;&
+            INPUT|OUTPUT) local -r vpn="${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}"
+               iptables -A "VPNFAILSAFE_$*" -"$sd" "$vpn" -"$io" "$dev" -j RETURN;;&
+            *) iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN;;&
+            INPUT) iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP;;&
+            *) iptables -A "VPNFAILSAFE_$*" -"$io" "$dev" -j RETURN;;
         esac
-        if [[ $@ != FORWARD ]]; then
-            iptables -A "VPNFAILSAFE_$*" -"$sd" "${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}" \
-                -"$io" "$dev" -j RETURN
-        fi
-        iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN
-        if [[ "$@" == INPUT ]]; then
-            iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP
-        fi
-        iptables -A "VPNFAILSAFE_$*" -"$io" "$dev" -j RETURN
     }
 
     # $@ := "INPUT" | "OUTPUT" | "FORWARD"
