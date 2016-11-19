@@ -35,9 +35,9 @@ update_hosts() {
 
 # $@ := "up" | "down"
 update_routes() {
-    local -r remote_ips="$(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1)"
+    local -ar remote_ips=($(getent -s files hosts "${remotes[@]}"|cut -d' ' -f1))
     if [[ $@ == up ]]; then
-        for remote_ip in "$trusted_ip" $remote_ips; do
+        for remote_ip in "$trusted_ip" "${remote_ips[@]}"; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
             fi
@@ -48,7 +48,7 @@ update_routes() {
             fi
         done
     elif [[ $@ == down ]]; then
-        for route in "$trusted_ip" $remote_ips 0.0.0.0/1 128.0.0.0/1; do
+        for route in "$trusted_ip" "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
             if [[ -n $(ip route show "$route") ]]; then
                 ip route del "$route"
             fi
@@ -102,7 +102,7 @@ update_firewall() {
         for ((i=1; i <= ${#remotes[*]}; ++i)); do
             local port="remote_port_$i"
             local proto="proto_$i"
-            iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "${remotes[$i-1]}" --"$sd"port "${!port}" "${suf[@]}"
+            iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "${remotes[i-1]}" --"$sd"port "${!port}" "${suf[@]}"
         done
     }
 
