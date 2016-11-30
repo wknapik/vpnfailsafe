@@ -1,4 +1,4 @@
-# What is vpnailsafe ?
+# What is vpnfailsafe ?
 
 `vpnfailsafe` prevents a VPN user's ISP-assigned IP address from being exposed
 on the internet, both while the VPN connection is active and when it goes down.
@@ -63,8 +63,8 @@ invasive. Perhaps a working example will be added in the future.
 Dependencies are minimal (listed in the PKGBUILD file). One assumption is that
 the VPN server will push at least one DNS to the client.
 
-`vpnfailsafe` has been tested on Linux, with tun-device-based VPNs (IP
-encapsulation) in all topologies supported by OpenVPN.
+`vpnfailsafe` has been tested on Linux, with both tun and tap devices, in all
+topologies supported by OpenVPN.
 
 There is no ipv6 support.
 
