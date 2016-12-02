@@ -28,7 +28,7 @@ readonly cur_port="${trusted_port:-$untrusted_port}"
 
 # $@ := ""
 update_hosts() {
-    if remote_entries="$(getent -s dns hosts "${cnf_remote_domains[@]}"|grep -v :)"; then
+    if remote_entries="$(getent -s dns hosts "${cnf_remote_domains[@]:-}"|grep -v :)"; then
         local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
         {
             sed -e "/^$beg/,/^$end/d" /etc/hosts
@@ -41,11 +41,11 @@ update_hosts() {
 
 # $@ := "up" | "down"
 update_routes() {
-    local -ar resolved_ips=($(getent -s files hosts "${cnf_remote_domains[@]:-!NONE!}"|cut -d' ' -f1 || true))
-    local -ar remote_ips=("${resolved_ips[@]}" "${cnf_remote_ips[@]}")
+    local -ar resolved_ips=($(getent -s files hosts "${cnf_remote_domains[@]:-nonexistent}"|cut -d' ' -f1 || true))
+    local -ar remote_ips=("${resolved_ips[@]:-}" "${cnf_remote_ips[@]:-}")
     if [[ $@ == up ]]; then
-        for remote_ip in "$cur_remote_ip" "${remote_ips[@]}"; do
-            if [[ -z $(ip route show "$remote_ip") ]]; then
+        for remote_ip in "$cur_remote_ip" "${remote_ips[@]:-}"; do
+            if [[ -n $remote_ip && -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
             fi
         done
@@ -55,8 +55,8 @@ update_routes() {
             fi
         done
     elif [[ $@ == down ]]; then
-        for route in "$cur_remote_ip" "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
-            if [[ -n $(ip route show "$route") ]]; then
+        for route in "$cur_remote_ip" "${remote_ips[@]:-}" 0.0.0.0/1 128.0.0.0/1; do
+            if [[ -n $route && -n $(ip route show "$route") ]]; then
                 ip route del "$route"
             fi
         done
