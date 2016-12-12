@@ -21,8 +21,8 @@ readonly untrusted_port
 readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2))
-readonly -a cnf_remote_domains=(${remotes[@]%%*[0-9]})
-readonly -a cnf_remote_ips=(${remotes[@]##*[!0-9.]*})
+readonly -a cnf_remote_domains=($(printf "%s\n" "${remotes[@]%%*[0-9]}"|sort -u))
+readonly -a cnf_remote_ips=($(printf "%s\n" "${remotes[@]##*[!0-9.]*}"|sort -u))
 readonly cur_remote_ip="${trusted_ip:-$untrusted_ip}"
 readonly cur_port="${trusted_port:-$untrusted_port}"
 
@@ -96,33 +96,42 @@ update_firewall() {
     # $@ := "INPUT" | "OUTPUT"
     accept_remotes() {
         case "$@" in
-            INPUT)  local -r sd=s states=""   io=i;;
-            OUTPUT) local -r sd=d states=NEW, io=o;;
+            INPUT)  local -r icmp_type=reply   io=i sd=s states="";;
+            OUTPUT) local -r icmp_type=request io=o sd=d states=NEW,;;
         esac
         local -r public_nic="$(ip route show "$cur_remote_ip"|cut -d' ' -f5)"
         local -ar suf=(-m conntrack --ctstate "$states"RELATED,ESTABLISHED -"$io" "${public_nic:?}" -j ACCEPT)
+        icmp_rule() {
+            iptables "$1" "$2" -p icmp --icmp-type "echo-$icmp_type" -"$sd" "$3" "${suf[@]/%ACCEPT/RETURN}"
+        }
         for ((i=1; i <= ${#remotes[*]}; ++i)); do
             local port="remote_port_$i"
             local proto="proto_$i"
             iptables -A "VPNFAILSAFE_$*" -p "${!proto%-client}" -"$sd" "${remotes[i-1]}" --"$sd"port "${!port}" "${suf[@]}"
+            if ! icmp_rule -C "VPNFAILSAFE_$*" "${remotes[i-1]}" 2>/dev/null; then
+                icmp_rule -A "VPNFAILSAFE_$*" "${remotes[i-1]}"
+            fi
         done
-        if ! iptables -S|grep -q -- "^-A VPNFAILSAFE_$* .*-$sd $cur_remote_ip/32 .*-j ACCEPT$"; then
+        if ! iptables -S|grep -q "^-A VPNFAILSAFE_$* .*-$sd $cur_remote_ip/32 .*-j ACCEPT$"; then
             for p in tcp udp; do
                 iptables -A "VPNFAILSAFE_$*" -p "$p" -"$sd" "$cur_remote_ip" --"$sd"port "${cur_port}" "${suf[@]}"
             done
+            icmp_rule -A "VPNFAILSAFE_$*" "$cur_remote_ip"
         fi
     }
 
     # $@ := "INPUT" | "OUTPUT" | "FORWARD"
     pass_private_nets() { 
         case "$@" in
-            INPUT) local -r sd=s io=i;;&
-            OUTPUT|FORWARD) local -r sd=d io=o;;&
+            INPUT) local -r io=i sd=s;;&
+            OUTPUT|FORWARD) local -r io=o sd=d;;&
             INPUT|OUTPUT) local -r vpn="${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}"
                iptables -A "VPNFAILSAFE_$*" -"$sd" "$vpn" -"$io" "$dev" -j RETURN;;&
             *) iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN;;&
             INPUT) iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP;;&
-            *) iptables -A "VPNFAILSAFE_$*" -"$io" "$dev" -j RETURN;;
+            *) for iface in "$dev" lo+; do
+                   iptables -A "VPNFAILSAFE_$*" -"$io" "$iface" -j RETURN
+               done;;
         esac
     }
 
