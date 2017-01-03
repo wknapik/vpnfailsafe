@@ -42,9 +42,9 @@ update_hosts() {
 # $@ := "up" | "down"
 update_routes() {
     local -ar resolved_ips=($(getent -s files hosts "${cnf_remote_domains[@]:-nonexistent}"|cut -d' ' -f1 || true))
-    local -ar remote_ips=("${resolved_ips[@]}" "${cnf_remote_ips[@]}")
+    local -ar remote_ips=("$cur_remote_ip" "${resolved_ips[@]}" "${cnf_remote_ips[@]}")
     if [[ $@ == up ]]; then
-        for remote_ip in "$cur_remote_ip" "${remote_ips[@]}"; do
+        for remote_ip in "${remote_ips[@]}"; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
             fi
@@ -55,7 +55,7 @@ update_routes() {
             fi
         done
     elif [[ $@ == down ]]; then
-        for route in "$cur_remote_ip" "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
+        for route in "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
             if [[ -n $(ip route show "$route") ]]; then
                 ip route del "$route"
             fi
