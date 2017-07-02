@@ -43,7 +43,7 @@ update_hosts() {
 update_routes() {
     local -ar resolved_ips=($(getent -s files hosts "${cnf_remote_domains[@]:-nonexistent}"|cut -d' ' -f1 || true))
     local -ar remote_ips=("$cur_remote_ip" "${resolved_ips[@]}" "${cnf_remote_ips[@]}")
-    if [[ $@ == up ]]; then
+    if [[ "$*" == up ]]; then
         for remote_ip in "${remote_ips[@]}"; do
             if [[ -z $(ip route show "$remote_ip") ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
@@ -54,7 +54,7 @@ update_routes() {
                 ip route add "$net" via "$route_vpn_gateway"
             fi
         done
-    elif [[ $@ == down ]]; then
+    elif [[ "$*" == down ]]; then
         for route in "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
             if [[ -n $(ip route show "$route") ]]; then
                 ip route del "$route"
@@ -69,13 +69,17 @@ update_resolv() {
         up) local domains="" ns=""
             for opt in ${!foreign_option_*}; do
                 case "${!opt}" in
-                    dhcp-option\ DOMAIN*) domains+="${!opt##* }";;
+                    dhcp-option\ DOMAIN*) domains+=" ${!opt##* }";;
                     dhcp-option\ DNS\ *) ns+=" ${!opt##* }";;
                     *) ;;
                 esac
             done
-            echo -e "${domains/ /search }\n${ns// /$'\n'nameserver }"|resolvconf -a "$dev";;
-        down) resolvconf -d "$dev" 2>/dev/null || true;;
+            if [[ -n "$ns" ]]; then
+                echo -e "${domains/ /search }\n${ns// /$'\n'nameserver }"|resolvconf -xa "$dev"
+            else
+                echo "$0: WARNING: no DNS was pushed by the VPN server, this could cause a DNS leak" >&2
+            fi;;
+        down) resolvconf -fd "$dev" 2>/dev/null || true;;
     esac
 }
 

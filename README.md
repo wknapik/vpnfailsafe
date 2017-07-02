@@ -1,3 +1,5 @@
+# FIXME: add tools/{disable_ipv6.conf,block_ipv6.sh,basic_firewall.sh}
+
 # What is vpnfailsafe ?
 
 `vpnfailsafe` prevents a VPN user's ISP-assigned IP address from being exposed
@@ -53,6 +55,7 @@ Arch Linux users may choose to install the
 [vpnfailsafe-git](https://aur.archlinux.org/packages/vpnfailsafe-git/) package
 from AUR instead.
 
+FIXME: not about openvpn-unroot
 If you want to use --user/--group to drop root priveleges, or otherwise run as
 an unprivileged user, prepare for an uphill battle. OpenVPN will not make it
 easy and the changes to get full functionality as non-root are likely to be
@@ -67,6 +70,8 @@ the VPN server will push at least one DNS to the client.
 topologies supported by OpenVPN.
 
 There is no ipv6 support.
+
+FIXME: not about: Note: Cannot set tx queue length on tun0-unrooted: Operation not permitted (errno=1)
 
 "RTNETLINK answers: File exists" errors can be ignored safely. They appear when
 OpenVPN tries to set up a route, that's already been created by `vpnfailsafe`.
