@@ -20,8 +20,9 @@ pkgver() {
 package() {
     cd "$srcdir/${pkgname%-git}"
     install -D -m755 "${pkgname%-git}.sh" "${pkgdir}/etc/openvpn/${pkgname%-git}.sh"
-    for f in LICENSE README.md extras/basic_firewall.sh extras/block_ipv6.sh \
-             extras/disable_ipv6.conf extras/example.conf extras/vpnfailsafe_reset.sh; do
-        install -D -m644 "$f" "${pkgdir}/usr/share/doc/${pkgname%-git}/"
+    install -D -m644 README.md "${pkgdir}/usr/share/doc/${pkgname%-git}/README.md"
+    for f in basic_firewall.sh block_ipv6.sh disable_ipv6.conf example.conf vpnfailsafe_reset.sh; do
+        install -D -m644 "extras/$f" "${pkgdir}/usr/share/doc/${pkgname%-git}/"
     done
+    install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname%-git}/"
 }
