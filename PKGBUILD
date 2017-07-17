@@ -24,5 +24,5 @@ package() {
     for f in basic_firewall.sh block_ipv6.sh disable_ipv6.conf example.conf vpnfailsafe_reset.sh; do
         install -D -m644 "extras/$f" "${pkgdir}/usr/share/doc/${pkgname%-git}/"
     done
-    install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname%-git}/"
+    install -D -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname%-git}/LICENSE"
 }
