@@ -2,14 +2,12 @@
 
 set -eEo pipefail
 
+read -ra numbered_vars <<<"${!foreign_option_*} ${!proto_*} ${!remote_*} ${!remote_port_*}"
+readonly numbered_vars "${numbered_vars[@]}"
 readonly dev
-readonly ${!foreign_option_*}
 readonly ifconfig_local
 readonly ifconfig_netmask # either (subnet)
 readonly ifconfig_remote # or (p2p/net30)
-readonly ${!proto_*}
-readonly ${!remote_*}
-readonly ${!remote_port_*}
 readonly route_net_gateway
 readonly route_vpn_gateway
 readonly script_type
@@ -20,9 +18,11 @@ readonly untrusted_port
 
 readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-readonly -a remotes=($(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2))
-readonly -a cnf_remote_domains=($(printf "%s\n" "${remotes[@]%%*[0-9]}"|sort -u))
-readonly -a cnf_remote_ips=($(printf "%s\n" "${remotes[@]##*[!0-9.]*}"|sort -u))
+declare -a remotes cnf_remote_domains cnf_remote_ips
+read -ra remotes <<<"$(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2|tr "\n" "\t")"
+read -ra cnf_remote_domains <<<"$(printf "%s\n" "${remotes[@]%%*[0-9]}"|sort -u|tr "\n" "\t")"
+read -ra cnf_remote_ips <<<"$(printf "%s\n" "${remotes[@]##*[!0-9.]*}"|sort -u|tr "\n" "\t")"
+readonly remotes cnf_remote_domains cnf_remote_ips
 readonly cur_remote_ip="${trusted_ip:-$untrusted_ip}"
 readonly cur_port="${trusted_port:-$untrusted_port}"
 
@@ -41,22 +41,23 @@ update_hosts() {
 
 # $@ := "up" | "down"
 update_routes() {
-    local -ar resolved_ips=($(getent -s files hosts "${cnf_remote_domains[@]:-nonexistent}"|cut -d' ' -f1 || true))
+    local -a resolved_ips
+    read -ra resolved_ips <<<"$(getent -s files hosts "${cnf_remote_domains[@]:-ENOENT}"|cut -d' ' -f1|tr "\n" "\t" || true)"
     local -ar remote_ips=("$cur_remote_ip" "${resolved_ips[@]}" "${cnf_remote_ips[@]}")
     if [[ "$*" == up ]]; then
         for remote_ip in "${remote_ips[@]}"; do
-            if [[ -z $(ip route show "$remote_ip") ]]; then
+            if [[ -n "$remote_ip" && -z "$(ip route show "$remote_ip")" ]]; then
                 ip route add "$remote_ip" via "$route_net_gateway"
             fi
         done
         for net in 0.0.0.0/1 128.0.0.0/1; do
-            if [[ -z $(ip route show "$net") ]]; then
+            if [[ -z "$(ip route show "$net")" ]]; then
                 ip route add "$net" via "$route_vpn_gateway"
             fi
         done
     elif [[ "$*" == down ]]; then
         for route in "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
-            if [[ -n $(ip route show "$route") ]]; then
+            if [[ -n "$route" && -n "$(ip route show "$route")" ]]; then
                 ip route del "$route"
             fi
         done

@@ -47,51 +47,47 @@ That's it.
 Since `vpnfailsafe` contains the functionality of the popular
 update-resolv-conf&#46;sh script, the two don't need to be combined.
 
-A complete configuration example is included as example.conf.
+A complete configuration example is included as
+[extras/example.conf](https://github.com/wknapik/vpnfailsafe/extras/example.conf).
 
 Arch Linux users may choose to install the
 [vpnfailsafe-git](https://aur.archlinux.org/packages/vpnfailsafe-git/) package
 from AUR instead.
-
-If you want to use --user/--group to drop root priveleges, or otherwise run as
-an unprivileged user, prepare for an uphill battle. OpenVPN will not make it
-easy and the changes to get full functionality as non-root are likely to be
-invasive. Perhaps a working example will be added in the future.
 
 # What are the requirements/assumptions/limitations ?
 
 Dependencies are minimal (listed in the PKGBUILD file). One assumption is that
 the VPN server will push at least one DNS to the client.
 
-`vpnfailsafe` has been tested on Linux, with both tun and tap devices, in all
-topologies supported by OpenVPN.
+`vpnfailsafe` has been tested on Linux, with all device types and topologies
+supported by OpenVPN.
 
-There is no ipv6 support.
+`vpnfailsafe` does not handle [ipv6](https://en.wikipedia.org/wiki/IPv6) at
+all. To prevent leaks, ipv6 should be disabled and/or blocked. See:
+[extras/disable_ipv6.conf](https://github.com/wknapik/vpnfailsafe/extras/disable_ipv6.conf)
+for an example of a sysctl config file that disables it and
+[extras/block_ipv6.sh](https://github.com/wknapik/vpnfailsafe/extras/block_ipv6.sh)
+for firewall rules to block it.
+
+# I'm getting an error every time I connect.
 
 "RTNETLINK answers: File exists" errors can be ignored safely. They appear when
 OpenVPN tries to set up a route, that's already been created by `vpnfailsafe`.
 Adding the "route-noexec" option will tell OpenVPN to leave routing to
 `vpnfailsafe` and prevent those errors from appearing.
 
-The /etc/hosts entries may eventually become stale and require removal. Because
-some VPN providers assign hundreds of IPs to their VPN server domains and
-return different subsets of that pool in subsequent queries, updating these
-entries automatically becomes very problematic. It makes determining whether a
-previously valid IP is still valid impossible, so automated updates would
-require constantly changing hosts entries, routes and firewall rules and almost
-always to no benefit. In the interest of keeping this script small and simple,
-such updates are now considered out of scope, unless github issues show popular
-demand for the feature.
-
 # How do I restore my system to the state from before running vpnfailsafe ?
 
 `vpnfailsafe` will revert all changes when the tunnel is closed, except for the
 firewall rules. You can restore those using the init script that set the
-iptables rules on boot, or by otherwise removing the VPNFAILSAFE_INPUT,
-VPNFAILSAFE_OUTPUT and VPNFAILSAFE_FORWARD chains.
+iptables rules on boot, or by using iptables-restore, or by otherwise removing
+the VPNFAILSAFE_INPUT, VPNFAILSAFE_OUTPUT and VPNFAILSAFE_FORWARD chains.
 
-Also, the entries in /etc/hosts for the VPN servers might get stale and require
-removal.
+The /etc/hosts entries may eventually become stale and also require removal.
+
+The
+[extras/vpnfailsafe_reset.sh](https://github.com/wknapik/vpnfailsafe/extras/vpnfailsafe_reset.sh)
+script can be used to achieve that.
 
 # Will vpnfailsafe protect me against DNS leaks ?
 
@@ -113,6 +109,9 @@ Yes. `vpnfailsafe` limits what kind of traffic is allowed, but only to achieve
 its goals. Otherwise everything is passed through to pre-existing firewall
 rules.
 
+An example of a basic firewall is included as
+[extras/basic_firewall.sh](https://github.com/wknapik/vpnfailsafe/extras/basic_firewall.sh).
+
 # Aren't there already scripts that do all that ?
 
 One would think so, but then one would be wrong.
@@ -120,3 +119,13 @@ One would think so, but then one would be wrong.
 What is out there are mostly "applications", with non-optional GUIs and
 thousands of lines of code behind them, often VPN-provider specific.
 
+# What else can I do to improve my security/privacy ?
+
+As far, as OpenVPN goes - you can check the [hardening
+section](https://openvpn.net/index.php/open-source/documentation/howto.html#security)
+of the official documentation.
+
+The steps necessary to run OpenVPN as an [unprivileged
+user](https://community.openvpn.net/openvpn/wiki/UnprivilegedUser) can be run
+automatically via the [openvpn-unroot
+script](https://github.com/wknapik/openvpn-unroot).
