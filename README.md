@@ -48,7 +48,7 @@ Since `vpnfailsafe` contains the functionality of the popular
 update-resolv-conf&#46;sh script, the two don't need to be combined.
 
 A complete configuration example is included as
-[extras/example.conf](https://github.com/wknapik/vpnfailsafe/extras/example.conf).
+[extras/example.conf](https://github.com/wknapik/vpnfailsafe/blob/master/extras/example.conf).
 
 Arch Linux users may choose to install the
 [vpnfailsafe-git](https://aur.archlinux.org/packages/vpnfailsafe-git/) package
@@ -64,9 +64,9 @@ supported by OpenVPN.
 
 `vpnfailsafe` does not handle [ipv6](https://en.wikipedia.org/wiki/IPv6) at
 all. To prevent leaks, ipv6 should be disabled and/or blocked. See:
-[extras/disable_ipv6.conf](https://github.com/wknapik/vpnfailsafe/extras/disable_ipv6.conf)
+[extras/disable_ipv6.conf](https://github.com/wknapik/vpnfailsafe/blob/master/extras/disable_ipv6.conf)
 for an example of a sysctl config file that disables it and
-[extras/block_ipv6.sh](https://github.com/wknapik/vpnfailsafe/extras/block_ipv6.sh)
+[extras/block_ipv6.sh](https://github.com/wknapik/vpnfailsafe/blob/master/extras/block_ipv6.sh)
 for firewall rules to block it.
 
 # I'm getting an error every time I connect.
@@ -86,7 +86,7 @@ the VPNFAILSAFE_INPUT, VPNFAILSAFE_OUTPUT and VPNFAILSAFE_FORWARD chains.
 The /etc/hosts entries may eventually become stale and also require removal.
 
 The
-[extras/vpnfailsafe_reset.sh](https://github.com/wknapik/vpnfailsafe/extras/vpnfailsafe_reset.sh)
+[extras/vpnfailsafe_reset.sh](https://github.com/wknapik/vpnfailsafe/blob/master/extras/vpnfailsafe_reset.sh)
 script can be used to achieve that.
 
 # Will vpnfailsafe protect me against DNS leaks ?
@@ -110,7 +110,7 @@ its goals. Otherwise everything is passed through to pre-existing firewall
 rules.
 
 An example of a basic firewall is included as
-[extras/basic_firewall.sh](https://github.com/wknapik/vpnfailsafe/extras/basic_firewall.sh).
+[extras/basic_firewall.sh](https://github.com/wknapik/vpnfailsafe/blob/master/extras/basic_firewall.sh).
 
 # Aren't there already scripts that do all that ?
 
