@@ -76,6 +76,14 @@ OpenVPN tries to set up a route, that's already been created by `vpnfailsafe`.
 Adding the "route-noexec" option will tell OpenVPN to leave routing to
 `vpnfailsafe` and prevent those errors from appearing.
 
+# How do I make OpenVPN reconnect when the underlying network connection is re-established ?
+
+Send the HUP signal to OpenVPN upon reconnection.
+
+Dhcpcd users would use dhcpcd-run-hooks, NetworkManager users would use a
+dispatcher script (e.g.:
+[extras/pkill_hup_openvpn](https://github.com/wknapik/vpnfailsafe/blob/master/extras/pkill_hup_openvpn)).
+
 # How do I restore my system to the state from before running vpnfailsafe ?
 
 `vpnfailsafe` will revert all changes when the tunnel is closed, except for the

@@ -28,7 +28,7 @@ readonly cur_port="${trusted_port:-$untrusted_port}"
 
 # $@ := ""
 update_hosts() {
-    if remote_entries="$(getent -s dns hosts "${cnf_remote_domains[@]:-}"|grep -v :)"; then
+    if remote_entries="$(getent -s dns hosts "${cnf_remote_domains[@]}"|grep -v :)"; then
         local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
         {
             sed -e "/^$beg/,/^$end/d" /etc/hosts

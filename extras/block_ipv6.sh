@@ -12,6 +12,6 @@ for table in nat mangle raw security; do
 done
 
 # Drop all ipv6 traffic.
-ip6tables -P INPUT DROP
-ip6tables -P OUTPUT DROP
-ip6tables -P FORWARD DROP
+for chain in INPUT OUTPUT FORWARD; do
+    ip6tables -P "$chain" DROP
+done

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Save as /etc/NetworkManager/dispatcher.d/pkill_hup_openvpn and make
+# executable to send SIGHUP to OpenVPN upon reconnection to the underlying
+# network.
+# Only tested with OpenVPN started manually, or via systemd. For VPN
+# connections configured via NetworkManager something else may be needed.
+
+set -eo pipefail
+
+readonly device="$1"
+readonly state="$2"
+
+readonly main_device="$(ip route list 0/0|cut -d' ' -f5)"
+
+if [[ "$device" == "$main_device" && "$state" == up ]]; then
+    pkill -HUP openvpn
+fi
