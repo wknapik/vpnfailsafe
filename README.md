@@ -1,4 +1,4 @@
-**NOTE: the latest commit fixes a potential dns leak (#25)**
+**NOTE: [ca284a9](../../../../wknapik/vpnfailsafe/commit/ca284a95e5bdcc0956ced2ae6def96c629d19ed6#diff-d7fe32a26c0579199da6c3df52843244) fixes a potential dns leak ([#25](../../../../wknapik/vpnfailsafe/issues/25))**
 
 # What is vpnfailsafe ?
 
