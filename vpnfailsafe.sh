@@ -125,6 +125,13 @@ update_firewall() {
         fi
     }
 
+    # $@ := "OUTPUT" | "FORWARD"
+    reject_dns() {
+        for proto in udp tcp; do
+            iptables -A "VPNFAILSAFE_$*" -p "$proto" --dport 53 ! -o "$dev" -j REJECT
+        done
+    }
+
     # $@ := "INPUT" | "OUTPUT" | "FORWARD"
     pass_private_nets() { 
         case "$@" in
@@ -147,7 +154,8 @@ update_firewall() {
 
     for chain in INPUT OUTPUT FORWARD; do
         insert_chain "$chain"
-        [[ $chain != FORWARD ]] && accept_remotes "$chain"
+        [[ $chain == FORWARD ]] || accept_remotes "$chain"
+        [[ $chain == INPUT ]] || reject_dns "$chain"
         pass_private_nets "$chain"
         drop_other "$chain"
     done
