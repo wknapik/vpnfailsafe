@@ -1,3 +1,5 @@
+**NOTE: [f4317ca](../../../../wknapik/vpnfailsafe/commit/f4317cac1d99033e48cbda5247571d5fc664583d) added support for additional routes, fixing [#26](../../../../wknapik/vpnfailsafe/issues/26) and making `vpnfailsafe` work for users of ExpressVPN and other providers that expose their DNS servers behind such extra routes**
+
 # What is vpnfailsafe ?
 
 `vpnfailsafe` prevents a VPN user's ISP-assigned IP address from being exposed
