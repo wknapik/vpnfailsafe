@@ -2,27 +2,33 @@
 
 set -eEo pipefail
 
-read -ra numbered_vars <<<"${!foreign_option_*} ${!proto_*} ${!remote_*} ${!remote_port_*}"
-readonly numbered_vars "${numbered_vars[@]}"
-readonly dev
-readonly ifconfig_local
-readonly ifconfig_netmask # either (subnet)
-readonly ifconfig_remote # or (p2p/net30)
-readonly route_net_gateway
-readonly route_vpn_gateway
-readonly script_type
-readonly trusted_ip
-readonly trusted_port
-readonly untrusted_ip
-readonly untrusted_port
+# $@ := ""
+set_route_vars() {
+    local network_var
+    local -a network_vars; read -ra network_vars <<<"${!route_network_*}"
+    for network_var in "${network_vars[@]}"; do
+        local -i i="${network_var#route_network_}"
+        local -a vars=("route_network_$i" "route_netmask_$i" "route_gateway_$i" "route_metric_$i")
+        route_networks[i]="${!vars[0]}"
+        route_netmasks[i]="${!vars[1]:-255.255.255.255}"
+        route_gateways[i]="${!vars[2]:-$route_vpn_gateway}"
+        route_metrics[i]="${!vars[3]:-0}"
+    done
+}
 
+# Configuration.
 readonly prog="$(basename "$0")"
 readonly private_nets="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-declare -a remotes cnf_remote_domains cnf_remote_ips
-read -ra remotes <<<"$(env|grep -oP 'remote_[0-9]+=.*'|sort -n|cut -d= -f2|tr "\n" "\t")"
-read -ra cnf_remote_domains <<<"$(printf "%s\n" "${remotes[@]%%*[0-9]}"|sort -u|tr "\n" "\t")"
-read -ra cnf_remote_ips <<<"$(printf "%s\n" "${remotes[@]##*[!0-9.]*}"|sort -u|tr "\n" "\t")"
-readonly remotes cnf_remote_domains cnf_remote_ips
+declare -a remotes cnf_remote_domains cnf_remote_ips route_networks route_netmasks route_gateways route_metrics
+read -ra remotes <<<"$(env|grep -oP '^remote_[0-9]+=.*'|sort -n|cut -d= -f2|tr '\n' '\t')"
+read -ra cnf_remote_domains <<<"$(printf '%s\n' "${remotes[@]%%*[0-9]}"|sort -u|tr '\n' '\t')"
+read -ra cnf_remote_ips <<<"$(printf '%s\n' "${remotes[@]##*[!0-9.]*}"|sort -u|tr '\n' '\t')"
+set_route_vars
+read -ra numbered_vars <<<"${!foreign_option_*} ${!proto_*} ${!remote_*} ${!remote_port_*} \
+                           ${!route_network_*} ${!route_netmask_*} ${!route_gateway_*} ${!route_metric_*}"
+readonly numbered_vars "${numbered_vars[@]}" dev ifconfig_local ifconfig_netmask ifconfig_remote \
+         route_net_gateway route_vpn_gateway script_type trusted_ip trusted_port untrusted_ip untrusted_port \
+         remotes cnf_remote_domains cnf_remote_ips route_networks route_netmasks route_gateways route_metrics
 readonly cur_remote_ip="${trusted_ip:-$untrusted_ip}"
 readonly cur_port="${trusted_port:-$untrusted_port}"
 
@@ -32,7 +38,7 @@ update_hosts() {
         local -r beg="# VPNFAILSAFE BEGIN" end="# VPNFAILSAFE END"
         {
             sed -e "/^$beg/,/^$end/d" /etc/hosts
-            echo -e "$beg\n$remote_entries\n$end"
+            echo -e "$beg\\n$remote_entries\\n$end"
         } >/etc/hosts.vpnfailsafe
         chmod --reference=/etc/hosts /etc/hosts.vpnfailsafe
         mv /etc/hosts.vpnfailsafe /etc/hosts
@@ -42,7 +48,7 @@ update_hosts() {
 # $@ := "up" | "down"
 update_routes() {
     local -a resolved_ips
-    read -ra resolved_ips <<<"$(getent -s files hosts "${cnf_remote_domains[@]:-ENOENT}"|cut -d' ' -f1|tr "\n" "\t" || true)"
+    read -ra resolved_ips <<<"$(getent -s files hosts "${cnf_remote_domains[@]:-ENOENT}"|cut -d' ' -f1|tr '\n' '\t' || true)"
     local -ar remote_ips=("$cur_remote_ip" "${resolved_ips[@]}" "${cnf_remote_ips[@]}")
     if [[ "$*" == up ]]; then
         for remote_ip in "${remote_ips[@]}"; do
@@ -55,10 +61,21 @@ update_routes() {
                 ip route add "$net" via "$route_vpn_gateway"
             fi
         done
+        for i in $(seq 1 "${#route_networks[@]}"); do
+            if [[ -z "$(ip route show "${route_networks[i]}/${route_netmasks[i]}")" ]]; then
+                ip route add "${route_networks[i]}/${route_netmasks[i]}" \
+                  via "${route_gateways[i]}" metric "${route_metrics[i]}" dev "$dev"
+            fi
+        done
     elif [[ "$*" == down ]]; then
         for route in "${remote_ips[@]}" 0.0.0.0/1 128.0.0.0/1; do
             if [[ -n "$route" && -n "$(ip route show "$route")" ]]; then
                 ip route del "$route"
+            fi
+        done
+        for i in $(seq 1 "${#route_networks[@]}"); do
+            if [[ -n "$(ip route show "${route_networks[i]}/${route_netmasks[i]}")" ]]; then
+                ip route del "${route_networks[i]}/${route_netmasks[i]}"
             fi
         done
     fi
@@ -76,7 +93,7 @@ update_resolv() {
                 esac
             done
             if [[ -n "$ns" ]]; then
-                echo -e "${domains/ /search }\n${ns// /$'\n'nameserver }"|resolvconf -xa "$dev"
+                echo -e "${domains/ /search }\\n${ns// /$'\n'nameserver }"|resolvconf -xa "$dev"
             else
                 echo "$0: WARNING: no DNS was pushed by the VPN server, this could cause a DNS leak" >&2
             fi;;
@@ -137,8 +154,11 @@ update_firewall() {
         case "$@" in
             INPUT) local -r io=i sd=s;;&
             OUTPUT|FORWARD) local -r io=o sd=d;;&
-            INPUT|OUTPUT) local -r vpn="${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}"
-               iptables -A "VPNFAILSAFE_$*" -"$sd" "$vpn" -"$io" "$dev" -j RETURN;;&
+            INPUT) local -r vpn="${ifconfig_remote:-$ifconfig_local}/${ifconfig_netmask:-32}"
+               iptables -A "VPNFAILSAFE_$*" -"$sd" "$vpn" -"$io" "$dev" -j RETURN
+               for i in $(seq 1 "${#route_networks[@]}"); do
+                   iptables -A "VPNFAILSAFE_$*" -"$sd" "${route_networks[i]}/${route_netmasks[i]}" -"$io" "$dev" -j RETURN
+               done;;&
             *) iptables -A "VPNFAILSAFE_$*" -"$sd" "$private_nets" ! -"$io" "$dev" -j RETURN;;&
             INPUT) iptables -A "VPNFAILSAFE_$*" -s "$private_nets" -i "$dev" -j DROP;;&
             *) for iface in "$dev" lo+; do
@@ -170,7 +190,7 @@ trap cleanup INT TERM
 
 # $@ := line_number exit_code
 err_msg() {
-    echo "$0:$1: \`$(sed -n "$1,+0{s/^\s*//;p}" "$0")' returned $2" >&2
+    echo "$0:$1: \`$(sed -n "$1,+0{s/^\\s*//;p}" "$0")' returned $2" >&2
     cleanup
 }
 trap 'err_msg "$LINENO" "$?"' ERR

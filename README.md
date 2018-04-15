@@ -1,5 +1,3 @@
-**NOTE: [ca284a9](../../../../wknapik/vpnfailsafe/commit/ca284a95e5bdcc0956ced2ae6def96c629d19ed6#diff-d7fe32a26c0579199da6c3df52843244) fixes a potential dns leak ([#25](../../../../wknapik/vpnfailsafe/issues/25))**
-
 # What is vpnfailsafe ?
 
 `vpnfailsafe` prevents a VPN user's ISP-assigned IP address from being exposed
@@ -16,10 +14,8 @@ torn down (--down).
 
 On --up:
 * All configured VPN server domains are resolved and saved in /etc/hosts.
-* Routes are set up, so that all traffic to the internet goes over the tunnel.
-  The original default route is preserved and two more specific ones are added
-  (mimicking --redirect-gateway def1) + routes to all configured VPN servers
-  are added.
+* Routes are set up, so that all traffic to the internet goes over the tunnel
+  and networks exposed by the VPN provider are accessible.
 * /etc/resolv.conf is updated, so only the DNS servers pushed by the VPN server
   are used.
 * iptables rules are inserted at the beginning of INPUT, OUTPUT and FORWARD
@@ -96,7 +92,7 @@ pull-filter ignore "route-ipv6 "
 # I'm getting an "RTNETLINK answers: File exists" error every time I connect.
 
 Those errors can be ignored safely. They appear when OpenVPN tries to set up a
-route, that's already been created by `vpnfailsafe`.  Adding the `route-noexec`
+route, that's already been created by `vpnfailsafe`. Adding the `route-noexec`
 option will tell OpenVPN to leave routing to `vpnfailsafe` and prevent those
 errors from appearing.
 
